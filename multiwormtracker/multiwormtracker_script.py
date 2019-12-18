@@ -105,7 +105,7 @@ def run_tracker(settings, stdout_queue=None):
                 print('Region "', key, '" cannot be applied to video',
                       settings["video_filename"])
                 print('Input image sizes do not match.')
-                return
+                return None, None
             all_regions += im
         all_regions = all_regions > 0.1
     settings["all_regions"] = all_regions
@@ -128,13 +128,13 @@ def run_tracker(settings, stdout_queue=None):
     if not check_for_worms(results["particle_dataframe"].index,
                            settings):
         print('No worms detected. Stopping!')
-        return
+        return print_data, None
     # Output
     write_results_file(results, settings)
 
     print('Done (in %.1f minutes).' % ((time.time() - t0) / 60.))
     video.release()
-    return print_data, results
+    return print_data, results['particle_dataframe'].loc[:, "bends"]
 
 
 class Video:
@@ -143,6 +143,7 @@ class Video:
     def __init__(self, settings, grey=False):
         video_filename = settings["video_filename"]
         self.video_filename = video_filename
+        self.cap = None
         if not os.path.exists(video_filename):
             raise RuntimeError(f"{video_filename} does not exist.")
 
@@ -1074,7 +1075,7 @@ def write_results_file(results, settings):
 # =============================================================================
 # --- Matplotlib code---
 # =============================================================================
-def print_frame(settings, t, particles, P, T, bends, track):
+def print_frame(settings, t, P, T, bends, track):
     font = {'size': settings["font_size"]}
     print('Printing frame', t + 1)
     image_filename = os.path.join(
@@ -1082,7 +1083,7 @@ def print_frame(settings, t, particles, P, T, bends, track):
     frame = (255 - io.imread(image_filename))
     os.remove(image_filename)
     small_imshow(settings, frame, cmap=cm.binary, vmax=300)
-    for p in particles:
+    for p in bends.index:
         pp = P == p
         l = np.logical_and(pp, T == t)
         if np.sum(l) > 0:
@@ -1103,19 +1104,20 @@ def print_frame(settings, t, particles, P, T, bends, track):
     plt.savefig(os.path.join(settings["save_as"], 'imgs', '%05d.jpg' % (t)))
 
 
-def print_images(settings, results):
+def print_images(settings, bends):
     plt.gcf().set_size_inches(20, 20)
     plt.clf()
-    track = results["track"]
+    with open(os.path.join(settings["save_as"], 'track.p'),
+              'br') as trackfile:
+        track = pickle.load(trackfile)
     P = track['particle']
     T = track['frame']
     output_overlayed_images = settings["output_overlayed_images"]
-    df = results["particle_dataframe"]
     if output_overlayed_images != 0:
         up_to = (len(set(T)) if output_overlayed_images is None
                  else output_overlayed_images)
         for t in range(up_to):
-            print_frame(settings, t, df.index, P, T, df.loc[:, "bends"], track)
+            print_frame(settings, t, P, T, bends, track)
     plt.clf()
 
 

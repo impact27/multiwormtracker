@@ -151,10 +151,10 @@ class MainApplication(tk.Frame):
         def finish(args):
             if not args:
                 return
-            settings, print_data, results = args
+            settings, print_data, bends = args
             self.parent.after(
                 1, self.finished, settings, index, print_data,
-                results, example)
+                bends, example)
 
         def error_callback(error):
             self.stdout_queue.put(''.join(traceback.format_exception_only(
@@ -164,10 +164,10 @@ class MainApplication(tk.Frame):
         self.pool.apply_async(run_tracker, (settings, self.stdout_queue),
                               callback=finish, error_callback=error_callback)
 
-    def finished(self, settings, index, print_data, results, example=False):
+    def finished(self, settings, index, print_data, bends, example=False):
         print_example_frame(settings, *print_data)
-        if results:
-            print_images(settings, results)
+        if bends is not None:
+            print_images(settings, bends)
         if example:
             self.log('Finished example output ' + settings['video_filename'])
         else:
@@ -302,8 +302,8 @@ def run_tracker(settings, queue=None):
         else:
             queue.put('Job: "{}" started.'.format(
                 settings['video_filename'].split('/')[-1]))
-        print_data, results = _run_tracker(settings, queue)
-        return settings, print_data, results
+        print_data, bends = _run_tracker(settings, queue)
+        return settings, print_data, bends
     except Exception:
         queue.put(
             "Got error while processing, please check the parameters.")

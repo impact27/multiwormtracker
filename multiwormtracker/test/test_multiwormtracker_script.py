@@ -33,9 +33,9 @@ def test_run_tracker(tmpdir):
     try:
         settings['save_as'] = "test_output_tmp"
         settings["stdout prefix"] = "[1]"
-        print_data, results = run_tracker(settings, queue)
+        print_data, bends = run_tracker(settings, queue)
         print_example_frame(settings, *print_data)
-        print_images(settings, results)
+        print_images(settings, bends)
 
         dircomp = filecmp.dircmp(
             'test_output', 'test_output_tmp',
